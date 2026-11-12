@@ -241,12 +241,16 @@ android/app/build/outputs/apk/debug/app-debug.apk
 首次构建会下载 Gradle 8.14.3（约 230 MB）和全部依赖，5–15 分钟很正常；
 后面增量构建几十秒。`gradlew` 没有执行权限时先 `chmod +x gradlew`。
 
-发新版前改 `android/app/build.gradle`：
+发新版前改两处版本号（`package.json` 和 `android/app/build.gradle`）：
 
 ```gradle
 versionCode 2          // 每次必须 +1
-versionName "1.1"      // 显示给用户
+versionName "1.1"      // 必须和 package.json 的 version 完全一致，显示给用户
 ```
+
+`build.gradle` 在配置阶段会用 `JsonSlurper` 读根目录 `package.json` 的
+`version` 做校验，不一致直接 `GradleException` 终止构建，避免 APK 版本和
+前端版本对不上。
 
 ## 8. 装到手机
 
@@ -376,21 +380,81 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 - Capacitor 8 的 `SystemBars` 自己监听 IME inset：键盘弹出时给原生 View 加底部
   padding，WebView 视口随之缩短，底部输入条会整体抬到键盘上方。
-- 因此**没有**在 `AndroidManifest.xml` 加 `windowSoftInputMode="adjustResize"`。
-  模板故意不写这个属性；再叠加 `adjustResize` 有在部分机型上重复留白的风险。
-  如果以后遇到某个 OEM 键盘仍然遮挡，再给 `MainActivity` 单独加：
+- 验收要求底部输入条绝对不被键盘遮挡，因此 `AndroidManifest.xml` 现在显式加了
+  `android:windowSoftInputMode="adjustResize"`。它和 `SystemBars` 的 IME padding
+  在少数 OEM 上可能叠加出多余空白；真机若看到键盘上方多一条空带，先查
+  `SystemBars` 的 `insetsHandling`，不要直接删 manifest 属性。
+- 本次构建环境已装 JDK 21 + SDK 36，`assembleDebug` 通过；但 `adb devices`
+  没有设备，**没有做真机键盘/系统栏目视验证**。
 
-  ```xml
-  android:windowSoftInputMode="adjustResize"
-  ```
+**Manifest 关键项**
 
-- 未安装 JDK/SDK，本次没有跑 Gradle，也没有在真机上做键盘/系统栏的目视验证。
-  上面结论基于 Capacitor 8.6 的 `SystemBars.java` 实现和 WebView 安全区行为。
+| 属性 | 值 | 原因 |
+| --- | --- | --- |
+| `android:allowBackup` | `false` | 工作记录只存本机，避免云备份把 IndexedDB 带出去 |
+| `android:screenOrientation` | `portrait` | 产品是单手竖屏速记，横屏布局没有专门适配 |
+| `android:windowSoftInputMode` | `adjustResize` | 键盘弹出时压缩视口，底部输入条不被遮挡 |
 
-## 12. 提交前检查
+改完可以用 `aapt2 dump xmltree --file AndroidManifest.xml <apk>` 核对编译后的值：
+`adjustResize` 是 `0x00000010`，`portrait` 是 `1`。
+
+## 12. 品牌图标与启动图
+
+所有位图都由 `scripts/gen-android-icons.mjs` 从 `public/icons/icon-512.png` 生成，
+PNG 和脚本一起提交仓库。**不要手改 res 下的图标/启动图**，要换样式就改脚本再跑：
 
 ```bash
-pnpm test        # 34 项纯逻辑测试
+node scripts/gen-android-icons.mjs   # 或 pnpm android:icons
+```
+
+脚本产出：
+
+| 资源 | 尺寸 | 说明 |
+| --- | --- | --- |
+| `mipmap-*/ic_launcher.png` | 48 / 72 / 96 / 144 / 192 | legacy 方形图标，sips 缩放 |
+| `mipmap-*/ic_launcher_round.png` | 同上 | 圆形裁切，供 API 24–25 的圆形图标设备 |
+| `mipmap-*/ic_launcher_foreground.png` | 108 / 162 / 216 / 324 / 432 | adaptive 前景层，透明底，图形在中间 72dp 安全区 |
+| `drawable-port-*/splash.png` | 320×480 … 1280×1920 | `#0b0b0c` 底 + 居中图标（短边 28%） |
+| `drawable-land-*/splash.png` | 480×320 … 1920×1280 | 同上，横屏尺寸保留 |
+
+- adaptive 背景层是 `values/ic_launcher_background.xml` 的 `#0b0b0c`，
+  `mipmap-anydpi-v26/ic_launcher{,_round}.xml` 引用前景 PNG + 该颜色。
+- 模板自带的两张矢量图（`drawable/ic_launcher_background.xml`、
+  `drawable-v24/ic_launcher_foreground.xml`）已删除，避免和品牌资源重名混淆。
+- 启动主题 `AppTheme.NoActionBarLaunch` 用
+  `windowSplashScreenAnimatedIcon=@mipmap/ic_launcher_foreground`，
+  背景和图标底色都是 `#0b0b0c`；Android 12+ 由系统启动屏接管，12 以下由
+  `core-splashscreen` 兼容层绘制。
+
+## 13. 本次构建记录
+
+环境：JDK 21.0.13、Android SDK 36、build-tools 36.0.0、Gradle 8.14.3、
+AGP 8.13.0、Capacitor 8.6，macOS arm64。
+
+| 项目 | 结果 |
+| --- | --- |
+| `pnpm test` | 79 项通过 |
+| `pnpm build` | 通过（仅有既有的动态/静态 import 警告） |
+| `cap sync android` | 通过 |
+| 首次 `./gradlew assembleDebug` | **3 分 44 秒**（含 Gradle 发行版和 Maven 依赖下载） |
+| 增量 `./gradlew assembleDebug` | **1.4 秒**（93 tasks up-to-date） |
+| debug APK | **4,298,918 字节（约 4.1 MB）** |
+
+产物：`android/app/build/outputs/apk/debug/app-debug.apk`
+
+APK 内已核对：`versionCode=1`、`versionName=1.0.0`、`allowBackup=false`、
+`screenOrientation=portrait`、`windowSoftInputMode=adjustResize`，
+五套密度图标和全部 splash 都在包里。
+
+**踩到的坑**：模板的 `values/styles.xml` 引用了 `@color/colorPrimary` /
+`colorPrimaryDark` / `colorAccent`，但仓库里没有 `colors.xml`，AAPT 链接会报
+`resource color/colorPrimary not found`。已补 `values/colors.xml`（品牌色）。
+
+## 14. 提交前检查
+
+```bash
+pnpm test        # 79 项纯逻辑测试
 pnpm build       # tsc -b + vite build
 pnpm android:build
+cd android && ./gradlew assembleDebug
 ```
