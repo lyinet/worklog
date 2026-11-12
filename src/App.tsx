@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react'
 import { CaptureBar } from './components/CaptureBar'
 import { MenuSheet } from './components/MenuSheet'
 import { SearchBar } from './components/SearchBar'
+import { StatsSheet } from './components/StatsSheet'
 import { Timeline } from './components/Timeline'
 import { TopBar } from './components/TopBar'
 import { groupByDay } from './domain/grouping'
 import { applyFilters } from './domain/search'
-import { summarize } from './domain/stats'
+import { computeStats, summarize } from './domain/stats'
 import { useEntries } from './state/useEntries'
 import { createStore } from './storage/idb'
 import { MemoryStore } from './storage/types'
@@ -28,8 +29,13 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  // 仅开发期：?stats=1 直接展开统计面板，方便截图自查
+  const [statsOpen, setStatsOpen] = useState(
+    () => import.meta.env.DEV && new URLSearchParams(window.location.search).has('stats'),
+  )
 
   const summary = useMemo(() => summarize(entries), [entries])
+  const stats = useMemo(() => computeStats(entries), [entries])
   const visible = useMemo(
     () => applyFilters(entries, { query, tag: activeTag }),
     [entries, query, activeTag],
@@ -107,6 +113,13 @@ export default function App() {
         entries={entries}
         onClose={() => setMenuOpen(false)}
         onClearAll={clearAll}
+        onOpenStats={() => setStatsOpen(true)}
+      />
+
+      <StatsSheet
+        open={statsOpen}
+        stats={stats}
+        onClose={() => setStatsOpen(false)}
       />
     </div>
   )
