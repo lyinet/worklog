@@ -34,7 +34,7 @@ export function CaptureBar({ onAdd }: CaptureBarProps) {
   }
 
   return (
-    <div className="border-t border-[#232326] bg-[#0e0e10]/95 backdrop-blur">
+    <div className="safe-bottom border-t border-[#232326] bg-[#0e0e10]/95 backdrop-blur">
       <form
         className="px-3 pt-2.5 pb-2"
         onSubmit={(e) => {

@@ -28,12 +28,17 @@
     overscroll-behavior-y: none;
   }
 
-  /* iOS/Android: keep the capture bar clear of the home indicator */
+  /*
+   * iOS/Android: keep the capture bar clear of the home indicator.
+   * Capacitor 8 injects --safe-area-inset-* on Android and sets the bottom
+   * value to 0 while the keyboard is open, so prefer it and fall back to the
+   * browser-provided env() (PWA / iOS) when the variable is absent.
+   */
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   }
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   }
 
   button {
