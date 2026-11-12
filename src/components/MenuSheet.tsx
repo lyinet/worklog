@@ -7,6 +7,7 @@ interface MenuSheetProps {
   entries: readonly Entry[]
   onClose: () => void
   onClearAll: () => Promise<void>
+  onOpenStats: () => void
 }
 
 function todayStamp(): string {
@@ -15,7 +16,7 @@ function todayStamp(): string {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
 }
 
-export function MenuSheet({ open, entries, onClose, onClearAll }: MenuSheetProps) {
+export function MenuSheet({ open, entries, onClose, onClearAll, onOpenStats }: MenuSheetProps) {
   const [confirming, setConfirming] = useState(false)
 
   if (!open) return null
@@ -32,6 +33,17 @@ export function MenuSheet({ open, entries, onClose, onClearAll }: MenuSheetProps
         <p className="mb-3 px-1 text-[13px] text-[#5d5d64]">共 {entries.length} 条记录</p>
 
         <div className="space-y-2">
+          <button
+            onClick={() => {
+              onClose()
+              onOpenStats()
+            }}
+            className="flex w-full items-center justify-between rounded-xl border border-[#232326] px-3 py-3 text-[15px] text-[#e6e6e8]"
+          >
+            统计
+            <span className="text-[12px] text-[#5d5d64]">连续天数 · 周对比 · 标签</span>
+          </button>
+
           <button
             onClick={() => {
               downloadFile(`工作记录-${todayStamp()}.md`, toMarkdown(entries), 'text/markdown')

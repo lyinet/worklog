@@ -9,3 +9,5 @@ coverage
 node_modules/
 android/app/build
 ios/App/build
+tsconfig.tsbuildinfo
+*.tsbuildinfo
