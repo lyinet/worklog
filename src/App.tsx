@@ -5,6 +5,7 @@ import { SearchBar } from './components/SearchBar'
 import { StatsSheet } from './components/StatsSheet'
 import { Timeline } from './components/Timeline'
 import { TopBar } from './components/TopBar'
+import { UndoBar } from './components/UndoBar'
 import { groupByDay } from './domain/grouping'
 import { applyFilters } from './domain/search'
 import { computeStats, summarize } from './domain/stats'
@@ -23,7 +24,8 @@ function makeStore() {
 
 export default function App() {
   const store = useMemo(makeStore, [])
-  const { entries, status, error, add, update, remove, clearAll } = useEntries(store)
+  const { entries, status, error, add, update, remove, undoRemove, pendingRemoval, clearAll } =
+    useEntries(store)
 
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
@@ -107,6 +109,8 @@ export default function App() {
       </main>
 
       <CaptureBar onAdd={add} />
+
+      <UndoBar pending={pendingRemoval} onUndo={() => void undoRemove()} />
 
       <MenuSheet
         open={menuOpen}

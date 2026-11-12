@@ -9,6 +9,11 @@ export interface Entry {
   createdAt: number
   /** Epoch milliseconds, last edit. */
   updatedAt: number
+  /**
+   * 待删除标记的到期时间。存在时记录仍在库里、只是从列表隐藏；
+   * 撤销时去掉这个字段，到点才真正 delete。见 domain/removal.ts。
+   */
+  deleteAfter?: number
 }
 
 /** Input for creating an entry; storage fills in id/timestamps/tags. */
