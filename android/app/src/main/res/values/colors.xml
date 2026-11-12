@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 品牌色：深底 + 薄荷绿强调色，与 index.css / PWA 图标一致 -->
+    <color name="colorPrimary">#7ee2a8</color>
+    <color name="colorPrimaryDark">#0b0b0c</color>
+    <color name="colorAccent">#7ee2a8</color>
+</resources>
