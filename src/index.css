@@ -48,4 +48,19 @@
   .no-scrollbar {
     scrollbar-width: none;
   }
+
+  /* 撤销条浮出：轻、短，不抢记录输入条的注意力 */
+  @keyframes undo-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  .animate-undo-in {
+    animation: undo-in 180ms ease-out both;
+  }
 }

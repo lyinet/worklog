@@ -12,19 +12,48 @@ interface CaptureBarProps {
 export function CaptureBar({ onAdd }: CaptureBarProps) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [flash, setFlash] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  // 中文输入法组合期间别把 Enter 当提交（选词的那一下就是 Enter）。
+  const composing = useRef(false)
+  // 部分浏览器 compositionend 后才派发 Enter；这个标记在下个事件循环里清掉。
+  const justEndedComposition = useRef(false)
+  const flashTimer = useRef<number | null>(null)
+  const flashSeq = useRef(0)
 
   useEffect(() => {
     inputRef.current?.focus()
+    return () => {
+      if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+    }
   }, [])
 
   const tags = parseTags(text)
 
+  /** 一次极轻的反馈：边框闪一下 + 轻微缩放，180ms 内结束，不堆 toast。 */
+  function giveFeedback() {
+    const seq = ++flashSeq.current
+    setFlash(seq)
+    if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => {
+      setFlash((current) => (current === seq ? 0 : current))
+      flashTimer.current = null
+    }, 180)
+  }
+
+  /** Enter 提交：组合中 / 刚选完词的那一下不能算提交。 */
+  function allowEnterSubmit(): boolean {
+    return !composing.current && !justEndedComposition.current
+  }
+
   async function submit() {
+    // 空内容、还没写完上一笔，不动。
+    if (busy) return
     const value = text.trim()
-    if (!value || busy) return
+    if (!value) return
     setBusy(true)
     setText('')
+    giveFeedback()
     try {
       await onAdd(value)
     } finally {
@@ -39,6 +68,8 @@ export function CaptureBar({ onAdd }: CaptureBarProps) {
         className="px-3 pt-2.5 pb-2"
         onSubmit={(e) => {
           e.preventDefault()
+          // 表单提交只可能来自 Enter 或「记下」按钮；Enter 要过组合状态的闸。
+          if (e.nativeEvent instanceof KeyboardEvent && !allowEnterSubmit()) return
           void submit()
         }}
       >
@@ -47,13 +78,38 @@ export function CaptureBar({ onAdd }: CaptureBarProps) {
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onCompositionStart={() => {
+              composing.current = true
+              justEndedComposition.current = false
+            }}
+            onCompositionEnd={() => {
+              composing.current = false
+              justEndedComposition.current = true
+              window.setTimeout(() => {
+                justEndedComposition.current = false
+              }, 0)
+            }}
+            onKeyDown={(e) => {
+              // 组合中的 Enter 是选词，不是提交；有些浏览器 keyCode 仍是 229。
+              if (e.nativeEvent.isComposing || e.keyCode === 229) {
+                if (e.key === 'Enter') e.preventDefault()
+                return
+              }
+              if (e.key === 'Enter' && !text.trim()) e.preventDefault()
+            }}
             enterKeyHint="send"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
             placeholder="刚做了什么？ 用 #标签 归类"
             aria-label="记录工作"
-            className="min-w-0 flex-1 rounded-2xl border border-[#2a2a2e] bg-[#17171a] px-4 py-3 text-[15px] leading-6 text-[#ededed] outline-none placeholder:text-[#5d5d64] focus:border-[#3a3a40]"
+            className={[
+              'min-w-0 flex-1 rounded-2xl border bg-[#17171a] px-4 py-3 text-[15px] leading-6 text-[#ededed] outline-none placeholder:text-[#5d5d64]',
+              'transition-[border-color,box-shadow,transform] duration-[180ms] ease-out',
+              flash > 0
+                ? 'scale-[1.015] border-[#7ee2a8] shadow-[0_0_0_3px_rgba(126,226,168,0.14)]'
+                : 'scale-100 border-[#2a2a2e] focus:border-[#3a3a40]',
+            ].join(' ')}
           />
           <button
             type="submit"
