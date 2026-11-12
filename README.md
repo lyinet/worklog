@@ -16,7 +16,9 @@
 - 时间线按天分组（今天 / 昨天 / 前天 / 具体日期）
 - 搜索正文与标签，标签筛选
 - 点条目展开：编辑 / 复制 / 删除（二次确认后 5 秒内可撤销）
-- 导出 Markdown（按天分组）与 JSON 备份
+- 导出 Markdown（按天分组）与 JSON 备份（文件名精确到分钟）
+- 从 JSON 备份恢复：合并而非覆盖，同 id 保留 updatedAt 较新的那条
+- 空状态引导：两行说明 +「试试记一条」直接聚焦输入框
 - 顶部实时统计：今天 / 本周 / 总计
 
 ## 技术栈
@@ -39,12 +41,14 @@ src/
     search.ts      子串搜索 + 标签筛选
     stats.ts       今日/本周/标签计数
     export.ts      Markdown / JSON 导出
+    import.ts      备份校验 + 按 id 合并
     entries.ts     创建、编辑、排序
   storage/
     types.ts       EntryStore 接口 + MemoryStore
     idb.ts         IndexedDB 实现
   state/
     useEntries.ts  加载/新增/更新/删除，乐观更新 + 失败回滚
+    importBackup.ts 导入落库编排（纯 async，可在 Node 里测）
   components/      UI，深色移动优先
   dev/demo.ts      仅开发期：?demo 灌样例数据
 ```

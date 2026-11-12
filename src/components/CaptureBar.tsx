@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { parseTags } from '../domain/tags'
 
 interface CaptureBarProps {
   onAdd: (text: string) => Promise<unknown>
+  /** 外部（例如空状态按钮）用来聚焦输入框。 */
+  inputRef: RefObject<HTMLInputElement | null>
 }
 
 /**
  * The whole point of the app: type, hit enter, done. Kept at the bottom of the
  * screen so a thumb can reach it, and it never loses the draft.
  */
-export function CaptureBar({ onAdd }: CaptureBarProps) {
+export function CaptureBar({ onAdd, inputRef }: CaptureBarProps) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
   // 中文输入法组合期间别把 Enter 当提交（选词的那一下就是 Enter）。
   const composing = useRef(false)
   // 部分浏览器 compositionend 后才派发 Enter；这个标记在下个事件循环里清掉。

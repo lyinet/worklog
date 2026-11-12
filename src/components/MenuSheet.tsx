@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Entry } from '../domain/types'
+import type { ImportSummary } from '../domain/import'
 import { downloadFile, toJSON, toMarkdown } from '../domain/export'
 
 interface MenuSheetProps {
@@ -8,18 +9,50 @@ interface MenuSheetProps {
   onClose: () => void
   onClearAll: () => Promise<void>
   onOpenStats: () => void
+  onImportBackup: (text: string) => Promise<ImportSummary>
 }
 
-function todayStamp(): string {
+type ImportResult = { kind: 'ok'; summary: ImportSummary } | { kind: 'error'; message: string }
+
+/** 文件名精确到分钟（本地时区），连续导出也不会互相覆盖。 */
+function minuteStamp(): string {
   const d = new Date()
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n))
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
+  return (
+    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
+    `-${pad(d.getHours())}${pad(d.getMinutes())}`
+  )
 }
 
-export function MenuSheet({ open, entries, onClose, onClearAll, onOpenStats }: MenuSheetProps) {
+export function MenuSheet({
+  open,
+  entries,
+  onClose,
+  onClearAll,
+  onOpenStats,
+  onImportBackup,
+}: MenuSheetProps) {
   const [confirming, setConfirming] = useState(false)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   if (!open) return null
+
+  async function handleFile(file: File | undefined) {
+    if (!file || importing) return
+    setImporting(true)
+    setImportResult(null)
+    try {
+      const summary = await onImportBackup(await file.text())
+      setImportResult({ kind: 'ok', summary })
+    } catch (cause) {
+      setImportResult({ kind: 'error', message: cause instanceof Error ? cause.message : String(cause) })
+    } finally {
+      setImporting(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true">
@@ -28,7 +61,7 @@ export function MenuSheet({ open, entries, onClose, onClearAll, onOpenStats }: M
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
-      <div className="safe-bottom relative w-full rounded-t-3xl border-t border-[#232326] bg-[#131315] p-4">
+      <div className="safe-bottom relative max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-[#232326] bg-[#131315] p-4">
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#2f2f34]" />
         <p className="mb-3 px-1 text-[13px] text-[#5d5d64]">共 {entries.length} 条记录</p>
 
@@ -46,7 +79,7 @@ export function MenuSheet({ open, entries, onClose, onClearAll, onOpenStats }: M
 
           <button
             onClick={() => {
-              downloadFile(`工作记录-${todayStamp()}.md`, toMarkdown(entries), 'text/markdown')
+              downloadFile(`工作记录-${minuteStamp()}.md`, toMarkdown(entries), 'text/markdown')
               onClose()
             }}
             className="flex w-full items-center justify-between rounded-xl border border-[#232326] px-3 py-3 text-[15px] text-[#e6e6e8]"
@@ -57,14 +90,50 @@ export function MenuSheet({ open, entries, onClose, onClearAll, onOpenStats }: M
 
           <button
             onClick={() => {
-              downloadFile(`worklog-${todayStamp()}.json`, toJSON(entries), 'application/json')
+              downloadFile(`worklog-${minuteStamp()}.json`, toJSON(entries), 'application/json')
               onClose()
             }}
             className="flex w-full items-center justify-between rounded-xl border border-[#232326] px-3 py-3 text-[15px] text-[#e6e6e8]"
           >
             导出 JSON 备份
-            <span className="text-[12px] text-[#5d5d64]">完整数据</span>
+            <span className="text-[12px] text-[#5d5d64]">完整数据 · 精确到分钟</span>
           </button>
+
+          <div className="rounded-xl border border-[#232326] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[15px] text-[#e6e6e8]">从 JSON 备份恢复</span>
+              <button
+                disabled={importing}
+                onClick={() => fileRef.current?.click()}
+                className="shrink-0 rounded-lg border border-[#2f4a3c] bg-[#14201a] px-3 py-2 text-[13px] font-medium text-[#7ee2a8] disabled:opacity-40"
+              >
+                {importing ? '导入中…' : '选择文件'}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[12px] leading-5 text-[#8b8b90]">
+              导入是<strong className="font-medium text-[#c9c9ce]">合并，不是覆盖</strong>
+              ：现有记录不会被清空，同 id 保留较新的那条。
+            </p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              aria-label="选择 JSON 备份文件"
+              className="hidden"
+              onChange={(e) => void handleFile(e.target.files?.[0])}
+            />
+            {importResult?.kind === 'ok' && (
+              <p data-testid="import-result" className="mt-2 rounded-lg bg-[#14201a] px-3 py-2 text-[13px] text-[#7ee2a8]">
+                导入完成 · 新增 {importResult.summary.added} 条 · 更新 {importResult.summary.updated} 条 · 跳过{' '}
+                {importResult.summary.skipped} 条
+              </p>
+            )}
+            {importResult?.kind === 'error' && (
+              <p data-testid="import-result" className="mt-2 rounded-lg bg-[#1d1414] px-3 py-2 text-[13px] text-[#e8b4b4]">
+                导入失败：{importResult.message}
+              </p>
+            )}
+          </div>
 
           {confirming ? (
             <div className="rounded-xl border border-[#5a2a2a] bg-[#1d1414] p-3">
