@@ -6,14 +6,24 @@ interface TimelineProps {
   onUpdate: (id: string, text: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onTagClick: (tag: string) => void
+  onTryRecord: () => void
 }
 
-export function Timeline({ groups, onUpdate, onDelete, onTagClick }: TimelineProps) {
+export function Timeline({ groups, onUpdate, onDelete, onTagClick, onTryRecord }: TimelineProps) {
   if (groups.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-[15px] text-[#5d5d64]">还没有记录</p>
-        <p className="mt-1 text-[13px] text-[#3f3f45]">在下面输入框写一句，回车即可</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-[17px] font-medium text-[#c9c9ce]">还没有记录</p>
+        <p className="mt-3 text-[13px] leading-6 text-[#6b6b72]">
+          写一句就行，用 <span className="text-[#7ee2a8]">#标签</span> 归类
+        </p>
+        <p className="text-[13px] leading-6 text-[#6b6b72]">所有数据只存在这台手机上</p>
+        <button
+          onClick={onTryRecord}
+          className="mt-5 rounded-xl border border-[#2f4a3c] bg-[#14201a] px-5 py-2.5 text-[14px] font-medium text-[#7ee2a8] transition active:scale-95"
+        >
+          试试记一条
+        </button>
       </div>
     )
   }

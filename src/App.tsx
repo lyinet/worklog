@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { CaptureBar } from './components/CaptureBar'
 import { MenuSheet } from './components/MenuSheet'
 import { SearchBar } from './components/SearchBar'
@@ -24,9 +24,20 @@ function makeStore() {
 
 export default function App() {
   const store = useMemo(makeStore, [])
-  const { entries, status, error, add, update, remove, undoRemove, pendingRemoval, clearAll } =
-    useEntries(store)
+  const {
+    entries,
+    status,
+    error,
+    add,
+    update,
+    remove,
+    undoRemove,
+    pendingRemoval,
+    clearAll,
+    importBackup,
+  } = useEntries(store)
 
+  const captureInputRef = useRef<HTMLInputElement>(null)
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
@@ -104,11 +115,12 @@ export default function App() {
               setSearching(true)
               setActiveTag(tag)
             }}
+            onTryRecord={() => captureInputRef.current?.focus()}
           />
         )}
       </main>
 
-      <CaptureBar onAdd={add} />
+      <CaptureBar onAdd={add} inputRef={captureInputRef} />
 
       <UndoBar pending={pendingRemoval} onUndo={() => void undoRemove()} />
 
@@ -117,6 +129,7 @@ export default function App() {
         entries={entries}
         onClose={() => setMenuOpen(false)}
         onClearAll={clearAll}
+        onImportBackup={importBackup}
         onOpenStats={() => setStatsOpen(true)}
       />
 

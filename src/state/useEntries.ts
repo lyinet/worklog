@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Entry } from '../domain/types'
 import { createEntry, editEntry, sortNewestFirst } from '../domain/entries'
+import type { ImportSummary } from '../domain/import'
 import {
   commitRemoval,
   hideRemoval,
@@ -12,6 +13,7 @@ import {
   type RemovalState,
 } from '../domain/removal'
 import type { EntryStore } from '../storage/types'
+import { applyBackup } from './importBackup'
 import { applyTransition, RemovalWriter } from './removalEffects'
 
 export type LoadStatus = 'loading' | 'ready' | 'error'
@@ -29,6 +31,11 @@ export interface UseEntries {
   /** 当前可撤销的窗口，null 表示没有。 */
   pendingRemoval: PendingRemoval | null
   clearAll: () => Promise<void>
+  /**
+   * 从 JSON 备份合并记录（不覆盖、不清空）。解析/结构错误直接抛出，
+   * 由调用方显示给用户；落库失败时抛错且不改界面状态。
+   */
+  importBackup: (text: string) => Promise<ImportSummary>
   reload: () => Promise<void>
 }
 
@@ -206,6 +213,18 @@ export function useEntries(store: EntryStore): UseEntries {
     }
   }, [store, writer, entries])
 
+  const importBackup = useCallback(
+    async (text: string): Promise<ImportSummary> => {
+      const summary = await writer.run(() =>
+        applyBackup(store, text, state.current.pending?.entry.id ?? null),
+      )
+      // 从库里重读，顺带补提交过期墓碑；界面和磁盘保持一致。
+      await reload()
+      return summary
+    },
+    [store, writer, reload],
+  )
+
   return useMemo(
     () => ({
       entries,
@@ -217,6 +236,7 @@ export function useEntries(store: EntryStore): UseEntries {
       undoRemove,
       pendingRemoval,
       clearAll,
+      importBackup,
       reload,
     }),
     [
@@ -229,6 +249,7 @@ export function useEntries(store: EntryStore): UseEntries {
       undoRemove,
       pendingRemoval,
       clearAll,
+      importBackup,
       reload,
     ],
   )
