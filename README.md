@@ -20,14 +20,16 @@
 - 从 JSON 备份恢复：合并而非覆盖，同 id 保留 updatedAt 较新的那条
 - 空状态引导：两行说明 +「试试记一条」直接聚焦输入框
 - 顶部实时统计：今天 / 本周 / 总计
+- 统计面板：连续记录天数、本周 vs 上周、最近 30 天热力图、标签分布
+- 可安装：浏览器里装成 PWA，安卓上是真 APK（Capacitor）
 
 ## 技术栈
 
 - **Vite + React 19 + TypeScript**（strict，`noUncheckedIndexedAccess`）
 - **Tailwind CSS v4**（`@tailwindcss/vite`，无配置文件，token 在 `src/index.css`）
 - **IndexedDB**（`idb`）持久化，通过 `EntryStore` 接口抽象
-- **Vitest** 测纯逻辑
-- 计划用 **Capacitor** 打安卓 APK
+- **Vitest** 测纯逻辑（104 个测试）
+- **Capacitor** 打安卓 APK（minSdk 24 / targetSdk 36）
 
 ## 目录结构
 
@@ -87,9 +89,20 @@ pnpm build        # 类型检查 + 生产构建
 
 ## Roadmap
 
-- [ ] PWA：manifest + 图标 + Service Worker，可装到桌面、断网可用
-- [ ] Capacitor 安卓壳，出 APK
-- [ ] 统计页：标签分布、连续记录天数、周对比
+- [x] PWA：manifest + 图标 + Service Worker，可装到桌面、断网可用
+- [x] Capacitor 安卓壳，出 APK
+- [x] 统计页：标签分布、连续记录天数、周对比
 - [x] 删除后 5 秒内可撤销
 - [ ] 桌面小部件 / 通知栏快捷记录（需原生插件）
 - [ ] 语音输入
+
+## 安装到安卓手机
+
+构建好的 APK 在 `android/app/build/outputs/apk/debug/app-debug.apk`，详细步骤见
+[docs/ANDROID.md](docs/ANDROID.md)。简要版：
+
+```bash
+./scripts/build-apk.sh                 # 一条命令出 APK
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
