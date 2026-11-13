@@ -11,3 +11,9 @@ android/app/build
 ios/App/build
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Android release signing（本地机密，绝不提交）
+android/keystore.properties
+android/app/worklog-release.keystore
+*.jks
+*.keystore

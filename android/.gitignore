@@ -57,6 +57,12 @@ captures/
 #*.jks
 #*.keystore
 
+# Worklog release signing（本地机密，绝不提交）
+keystore.properties
+app/worklog-release.keystore
+*.jks
+*.keystore
+
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 .cxx/
