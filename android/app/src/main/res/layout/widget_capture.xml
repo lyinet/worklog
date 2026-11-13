@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2x1 卡片：点任意位置都打开 App 并聚焦输入框 -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_capture"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center"
+    android:text="＋ 记一条"
+    android:textColor="#7ee2a8"
+    android:textSize="16sp" />

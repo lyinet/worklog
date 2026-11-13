@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CaptureBar } from './components/CaptureBar'
 import { MenuSheet } from './components/MenuSheet'
 import { SearchBar } from './components/SearchBar'
@@ -38,6 +38,14 @@ export default function App() {
   } = useEntries(store)
 
   const captureInputRef = useRef<HTMLInputElement>(null)
+
+  // 桌面小部件带 ?focus=capture 启动：等首帧渲染完再聚焦输入框，软键盘会跟着弹起。
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('focus')) return
+    const id = requestAnimationFrame(() => captureInputRef.current?.focus())
+    return () => cancelAnimationFrame(id)
+  }, [])
+
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
