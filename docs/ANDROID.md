@@ -163,60 +163,12 @@ pnpm android:sync
 
 ## 6. 生成签名（发布用）
 
-只装到自己手机上，可以直接用 debug APK，系统会自动用
-`~/.android/debug.keystore` 签名，跳过这一步。
+本项目已经配好 release 签名，keystore 在 `android/app/worklog-release.keystore`，
+密码在 `android/keystore.properties`（两者都已 gitignore）。构建、验证和备份的
+完整流程见 [docs/RELEASE.md](RELEASE.md)。
 
-要发布或长期升级，先生成一个 release keystore。**这个文件丢了就再也无法覆盖安装
-升级，只能换包名重新上架**，务必单独备份：
-
-```bash
-mkdir -p "$HOME/keys"
-keytool -genkeypair -v \
-  -keystore "$HOME/keys/worklog-release.jks" \
-  -alias worklog \
-  -keyalg RSA -keysize 2048 -validity 10000
-```
-
-按提示设置密码和证书信息（姓名、组织可以随便填）。
-
-然后在 `android/keystore.properties` 写密码（这个文件不要提交）：
-
-```properties
-storeFile=/Users/你/keys/worklog-release.jks
-storePassword=你的密码
-keyAlias=worklog
-keyPassword=你的密码
-```
-
-在 `android/app/build.gradle` 里加签名配置（只加一次）：
-
-```gradle
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file("keystore.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-android {
-    // ...原有配置...
-    signingConfigs {
-        release {
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            // ...原有配置...
-        }
-    }
-}
-```
-
-并把 `android/keystore.properties` 和 `*.jks` 加进 `.gitignore`。
+只装到自己手机上仍然可以直接用 debug APK，系统会自动用
+`~/.android/debug.keystore` 签名。
 
 ## 7. 编 APK
 

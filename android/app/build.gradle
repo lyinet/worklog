@@ -13,6 +13,34 @@ if (packageVersion != appVersionName) {
     )
 }
 
+// 发布签名：密码只放在 android/keystore.properties（已 gitignore）。
+// 文件或 keystore 缺失时不让整个工程配置失败，release 回退到 debug 签名并给出警告，
+// 这样本地仍能 assembleRelease 做 minify 验证；正式分发前必须补上真实签名。
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def releaseSigningConfigured = false
+def releaseSigningError = null
+if (keystorePropertiesFile.exists()) {
+    try {
+        keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+        def requiredKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+        def missingKeys = requiredKeys.findAll { !keystoreProperties[it] }
+        def storeFileValue = keystoreProperties['storeFile']
+        def resolvedStoreFile = storeFileValue ? rootProject.file(storeFileValue) : null
+        if (!missingKeys.isEmpty()) {
+            releaseSigningError = "keystore.properties 缺少字段：${missingKeys.join(', ')}"
+        } else if (!resolvedStoreFile.exists()) {
+            releaseSigningError = "keystore 文件不存在：${resolvedStoreFile}"
+        } else {
+            releaseSigningConfigured = true
+        }
+    } catch (Exception e) {
+        releaseSigningError = "读取 keystore.properties 失败：${e.message}"
+    }
+} else {
+    releaseSigningError = "未找到 android/keystore.properties"
+}
+
 android {
     namespace = "com.lyinet.worklog"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -29,9 +57,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            release {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+                logger.warn("WARNING: release 未配置签名（${releaseSigningError}），回退到 debug 签名。此 APK 不可分发。")
+            }
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
