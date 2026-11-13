@@ -17,6 +17,7 @@
     "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "7.0.1",
     "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "idb": "^8.0.0",
