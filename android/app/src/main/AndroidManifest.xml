@@ -26,6 +26,19 @@
 
         </activity>
 
+        <!-- exported 必须为 true：桌面（另一个 App）要能向它发 APPWIDGET_UPDATE，
+             否则小部件根本不会出现在选择器里。 -->
+        <receiver
+            android:name=".CaptureWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_capture_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
