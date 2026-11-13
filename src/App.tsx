@@ -13,6 +13,18 @@ import { useEntries } from './state/useEntries'
 import { createStore } from './storage/idb'
 import { MemoryStore } from './storage/types'
 
+/** 原生壳里手动拉起软键盘；浏览器里什么都不做。 */
+async function showNativeKeyboard(): Promise<void> {
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) return
+    const { Keyboard } = await import('@capacitor/keyboard')
+    await Keyboard.show()
+  } catch {
+    // 键盘没弹出来不影响记录本身，静默失败
+  }
+}
+
 function makeStore() {
   try {
     return createStore()
@@ -39,11 +51,19 @@ export default function App() {
 
   const captureInputRef = useRef<HTMLInputElement>(null)
 
-  // 桌面小部件带 ?focus=capture 启动：等首帧渲染完再聚焦输入框，软键盘会跟着弹起。
+  // 桌面小部件带 ?focus=capture 启动：等首帧渲染完再聚焦输入框。
+  // WebView 里 focus() 只给焦点、不会拉起软键盘，原生壳要额外调 Keyboard.show()。
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has('focus')) return
-    const id = requestAnimationFrame(() => captureInputRef.current?.focus())
-    return () => cancelAnimationFrame(id)
+    // WebView 里首次渲染时输入连接还没建立，立刻 showSoftInput 会被丢掉，
+    // 所以聚焦和唤起键盘各重试几次，覆盖慢设备 / 冷启动的时序。
+    const timers = [0, 250, 700].map((delay) =>
+      window.setTimeout(() => {
+        captureInputRef.current?.focus()
+        void showNativeKeyboard()
+      }, delay),
+    )
+    return () => timers.forEach(clearTimeout)
   }, [])
 
   const [searching, setSearching] = useState(false)
