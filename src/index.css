@@ -68,4 +68,47 @@
   .animate-undo-in {
     animation: undo-in 180ms ease-out both;
   }
+
+  /* 录音态：红色脉冲圈 + 四根跳动的波形条，纯 CSS，不引动画库 */
+  @keyframes voice-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 7px rgba(255, 107, 107, 0);
+    }
+  }
+  @keyframes voice-wave {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  .voice-recording {
+    animation: voice-pulse 1.4s ease-out infinite;
+  }
+  .voice-bar {
+    transform-origin: center;
+    animation: voice-wave 900ms ease-in-out infinite;
+  }
+  .voice-bar-2 {
+    animation-delay: 150ms;
+  }
+  .voice-bar-3 {
+    animation-delay: 300ms;
+  }
+  .voice-bar-4 {
+    animation-delay: 450ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .voice-recording,
+    .voice-bar {
+      animation: none;
+    }
+  }
 }
