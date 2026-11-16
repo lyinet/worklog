@@ -62,7 +62,31 @@ keyPassword=刚才生成的密码
 
 `storeFile` 的相对路径以 `android/` 为基准；绝对路径也可用。
 
-## 4. 构建
+## 一条命令打 release 包
+
+准备好第 1 节的两个本地签名文件后，在仓库根目录执行：
+
+~~~bash
+bash scripts/build-release.sh
+~~~
+
+脚本默认使用 Homebrew 的 JDK 21 和 Android SDK（与 debug 脚本相同），
+也可通过 JAVA_HOME / ANDROID_HOME 指定已有工具链，需要 build-tools 36.0.0。
+
+脚本先检查工具链、android/keystore.properties 的四个必填字段，以及
+storeFile 指向的 keystore 是否存在、可读；相对路径以 android/ 为基准。
+缺少签名配置会直接报错退出，不会回退到 debug 签名，也不会输出密码。
+然后依次执行 pnpm build、npx cap sync android、./gradlew assembleRelease。
+Gradle 会校验 versionName 与 package.json 的版本一致。
+
+构建后运行 apksigner verify --verbose --print-certs，签名无效即退出；
+输出包含 v1 / v2 签名方案状态和证书指纹，可与第 2 节核对。
+minSdk 24 的包使用 v2 签名即可，v1 显示 false 不代表校验失败。
+最后用 aapt2 读取 APK 中的 versionName / versionCode，打印绝对路径和字节大小。
+产物为 android/app/build/outputs/apk/release/app-release.apk。
+脚本不安装 APK；发版前仍需单独运行 pnpm test，并在目标设备上验证。
+
+## 4. 手动构建
 
 ```bash
 pnpm test
