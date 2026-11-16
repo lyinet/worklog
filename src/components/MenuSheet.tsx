@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { Entry } from '../domain/types'
 import type { ImportSummary } from '../domain/import'
 import { downloadFile, toJSON, toMarkdown } from '../domain/export'
+import { CaptureNotificationSetting } from './CaptureNotificationSetting'
 
 interface MenuSheetProps {
   open: boolean
@@ -66,6 +67,8 @@ export function MenuSheet({
         <p className="mb-3 px-1 text-[13px] text-[#5d5d64]">共 {entries.length} 条记录</p>
 
         <div className="space-y-2">
+          <CaptureNotificationSetting open={open} />
+
           <button
             onClick={() => {
               onClose()

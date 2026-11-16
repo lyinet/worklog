@@ -27,6 +27,7 @@ public class MainActivity extends BridgeActivity {
                 .setStartPath("/?focus=capture")
                 .create();
         }
+        registerPlugin(CaptureNotificationPlugin.class);
         super.onCreate(savedInstanceState);
 
         if (focusCapture) {

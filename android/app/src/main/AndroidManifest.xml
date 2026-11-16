@@ -39,6 +39,15 @@
                 android:resource="@xml/widget_capture_info" />
         </receiver>
 
+        <receiver
+            android:name=".CaptureNotificationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -55,6 +64,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 语音输入：录音权限；第一次点麦克风时由插件申请 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Android 11+ 包可见性：不声明就查不到系统的语音识别服务 -->
     <queries>
