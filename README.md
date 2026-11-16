@@ -23,6 +23,7 @@
 - 统计面板：连续记录天数、本周 vs 上周、最近 30 天热力图、标签分布
 - 语音输入：说一句就落到输入框里，改完再回车（[docs/VOICE.md](docs/VOICE.md)）
 - 桌面小部件：2x1 卡片，点一下直接进输入态、键盘弹起
+- 通知栏快捷记录：常驻静音通知，点通知或「记一笔」按钮直接进输入态（[docs/NOTIFICATION.md](docs/NOTIFICATION.md)）
 - 可安装：浏览器里装成 PWA，安卓上是真 APK（Capacitor）
 
 ## 技术栈
@@ -30,7 +31,7 @@
 - **Vite + React 19 + TypeScript**（strict，`noUncheckedIndexedAccess`）
 - **Tailwind CSS v4**（`@tailwindcss/vite`，无配置文件，token 在 `src/index.css`）
 - **IndexedDB**（`idb`）持久化，通过 `EntryStore` 接口抽象
-- **Vitest** 测纯逻辑（104 个测试）
+- **Vitest** 测纯逻辑（140 个测试）
 - **Capacitor** 打安卓 APK（minSdk 24 / targetSdk 36）
 
 ## 目录结构
@@ -97,7 +98,7 @@ pnpm build        # 类型检查 + 生产构建
 - [x] 删除后 5 秒内可撤销
 - [x] 桌面小部件（点击即记）
 - [x] 语音输入（说完落到输入框，人改完回车；详见 [docs/VOICE.md](docs/VOICE.md)）
-- [ ] 通知栏快捷记录
+- [x] 通知栏快捷记录（点击即记；详见 [docs/NOTIFICATION.md](docs/NOTIFICATION.md)）
 - [x] release 签名发布流程自动化
 
 ## 安装到安卓手机

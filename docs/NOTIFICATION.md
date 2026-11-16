@@ -103,3 +103,17 @@ APK 为 `android/app/build/outputs/apk/debug/app-debug.apk`，4,334,617 字节�
   fixture 验证。频道权限关闭、拒绝或划掉权限弹窗后不重复弹，也尚未做设备验证。
 - 保留旧包数据的升级、`MY_PACKAGE_REPLACED` 恢复、系统强行停止后的恢复，
   以及独立的应用进程重启场景；本次已验证的是设备重启后广播恢复。
+
+## release 包实测（v1.2.0）
+
+debug 包通过不代表发布包通过：release 开了 minify，插件的反射注册可能被裁掉。
+`bash scripts/build-release.sh` 打出的签名包（versionName 1.2.0 / versionCode 3，
+1.1M，v2 签名校验通过）装到同一台 Android 16 模拟器上实测：
+
+- 菜单里新项正常显示，首次打开开关仍弹出系统通知权限框；
+- 允许后 `dumpsys notification` 里 `channel=quick_capture`、
+  `flags=ONGOING_EVENT|ONLY_ALERT_ONCE|SILENT`、`title=工作簿`、`actions=1`；
+- 点通知本体回到前台，logcat 出现 `GoogleInputMethodService onStartInputView`，
+  即输入框软键盘弹起。
+
+结论：release 构建下插件与通知链路都在。
