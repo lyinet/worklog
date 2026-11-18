@@ -10,6 +10,7 @@ import { groupByDay } from './domain/grouping'
 import { applyFilters } from './domain/search'
 import { computeStats, summarize } from './domain/stats'
 import { useEntries } from './state/useEntries'
+import { useNotificationReplies } from './state/useNotificationReplies'
 import { createStore } from './storage/idb'
 import { MemoryStore } from './storage/types'
 
@@ -48,6 +49,7 @@ export default function App() {
     clearAll,
     importBackup,
   } = useEntries(store)
+  const notificationReplyMessage = useNotificationReplies(add, status, !(store instanceof MemoryStore))
 
   const captureInputRef = useRef<HTMLInputElement>(null)
 
@@ -110,6 +112,12 @@ export default function App() {
           activeTag={activeTag}
           onTagChange={setActiveTag}
         />
+      )}
+
+      {notificationReplyMessage && (
+        <p role="status" className="mx-4 mb-2 text-[12px] text-[#7ee2a8]">
+          {notificationReplyMessage}
+        </p>
       )}
 
       {error && (
