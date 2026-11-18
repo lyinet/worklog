@@ -3,6 +3,7 @@ import type { Entry } from '../domain/types'
 import type { ImportSummary } from '../domain/import'
 import { downloadFile, toJSON, toMarkdown } from '../domain/export'
 import { CaptureNotificationSetting } from './CaptureNotificationSetting'
+import { SummarySheet } from './SummarySheet'
 
 interface MenuSheetProps {
   open: boolean
@@ -36,9 +37,24 @@ export function MenuSheet({
   const [confirming, setConfirming] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importing, setImporting] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   if (!open) return null
+
+  if (summaryOpen) {
+    return (
+      <SummarySheet
+        entries={entries}
+        onClose={() => setSummaryOpen(false)}
+        onDownload={(markdown) => {
+          downloadFile('工作周报-' + minuteStamp() + '.md', markdown, 'text/markdown')
+          setSummaryOpen(false)
+          onClose()
+        }}
+      />
+    )
+  }
 
   async function handleFile(file: File | undefined) {
     if (!file || importing) return
@@ -89,6 +105,14 @@ export function MenuSheet({
           >
             导出 Markdown
             <span className="text-[12px] text-[#5d5d64]">按天分组</span>
+          </button>
+
+          <button
+            onClick={() => setSummaryOpen(true)}
+            className="flex w-full items-center justify-between rounded-xl border border-[#232326] px-3 py-3 text-[15px] text-[#e6e6e8]"
+          >
+            导出周报
+            <span className="text-[12px] text-[#5d5d64]">选范围 · 按标签汇总</span>
           </button>
 
           <button
