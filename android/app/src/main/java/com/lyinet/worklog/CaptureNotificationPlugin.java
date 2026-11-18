@@ -1,9 +1,14 @@
 package com.lyinet.worklog;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
 import android.provider.Settings;
+import androidx.core.content.ContextCompat;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -17,8 +22,18 @@ import com.getcapacitor.annotation.PermissionCallback;
     permissions = @Permission(alias = "notifications", strings = Manifest.permission.POST_NOTIFICATIONS)
 )
 public class CaptureNotificationPlugin extends Plugin {
+    private String pendingOwner;
+    private final BroadcastReceiver pendingChanged = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            notifyListeners("pendingChanged", new JSObject());
+        }
+    };
+
     @Override
     public void load() {
+        ContextCompat.registerReceiver(getContext(), pendingChanged,
+            new IntentFilter(CaptureNotification.ACTION_PENDING_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED);
         CaptureNotification.sync(getContext());
     }
 
@@ -56,6 +71,7 @@ public class CaptureNotificationPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             try {
                 CaptureNotification.setEnabled(getContext(), enabled);
+                notifyListeners("statusChanged", status());
                 if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                     && !CaptureNotification.hasRuntimePermission(getContext())
                     && !CaptureNotification.hasRequestedPermission(getContext())) {
@@ -69,6 +85,63 @@ public class CaptureNotificationPlugin extends Plugin {
                 call.reject("通知设置失败，请重试", cause);
             }
         });
+    }
+
+    @PluginMethod
+    public void drainPending(PluginCall call) {
+        String owner = call.getString("owner");
+        if (owner == null || owner.isEmpty()) {
+            call.reject("缺少通知记录会话编号");
+            return;
+        }
+        try {
+            if (pendingOwner != null && !pendingOwner.equals(owner)) {
+                call.reject("另一个工作簿页面正在处理通知记录");
+                return;
+            }
+            pendingOwner = owner;
+            JSObject result = new JSObject();
+            CaptureNotificationQueue.DrainResult batch = CaptureNotification.drainPending(getContext(), owner);
+            result.put("entries", new JSArray(batch.entries.toString()));
+            result.put("dropped", batch.dropped);
+            call.resolve(result);
+        } catch (Exception cause) {
+            call.reject("通知记录读取失败，请重新打开工作簿", cause);
+        }
+    }
+
+    @PluginMethod
+    public void acknowledgePending(PluginCall call) {
+        JSArray ids = call.getArray("ids");
+        String owner = call.getString("owner");
+        if (ids == null || owner == null) {
+            call.reject("缺少通知记录编号");
+            return;
+        }
+        try {
+            CaptureNotification.acknowledgePending(getContext(), owner, ids);
+            call.resolve();
+        } catch (RuntimeException cause) {
+            call.reject("通知记录确认失败，将在下次打开时重试", cause);
+        }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        getContext().unregisterReceiver(pendingChanged);
+        if (pendingOwner != null) CaptureNotificationQueue.release(pendingOwner);
+    }
+
+    @PluginMethod
+    public void releasePending(PluginCall call) {
+        String owner = call.getString("owner");
+        if (owner == null || owner.isEmpty()) {
+            call.reject("缺少通知记录会话编号");
+            return;
+        }
+        CaptureNotificationQueue.release(owner);
+        if (owner.equals(pendingOwner)) pendingOwner = null;
+        call.resolve();
     }
 
     @PermissionCallback

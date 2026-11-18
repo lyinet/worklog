@@ -15,6 +15,7 @@ import {
 import type { EntryStore } from '../storage/types'
 import { applyBackup } from './importBackup'
 import { applyTransition, RemovalWriter } from './removalEffects'
+import { saveNotificationEntry, type NotificationEntrySource } from './notificationEntries'
 
 export type LoadStatus = 'loading' | 'ready' | 'error'
 
@@ -22,7 +23,7 @@ export interface UseEntries {
   entries: Entry[]
   status: LoadStatus
   error: string | null
-  add: (text: string) => Promise<Entry | null>
+  add: (text: string, source?: NotificationEntrySource) => Promise<Entry | null>
   update: (id: string, text: string) => Promise<void>
   /** 删除：先隐藏 + 写墓碑，5 秒内可撤销，不立刻落库删除。 */
   remove: (id: string) => Promise<void>
@@ -132,7 +133,22 @@ export function useEntries(store: EntryStore): UseEntries {
   }, [pendingRemoval, commitExpired])
 
   const add = useCallback(
-    async (text: string): Promise<Entry | null> => {
+    async (text: string, source?: NotificationEntrySource): Promise<Entry | null> => {
+      if (source) {
+        try {
+          return await writer.run(async () => {
+            const entry = await saveNotificationEntry(store, text, source)
+            if (entry && !state.current.entries.some((current) => current.id === entry.id)
+              && entry.deleteAfter === undefined) {
+              publish({ ...state.current, entries: sortNewestFirst([entry, ...state.current.entries]) })
+            }
+            return entry
+          })
+        } catch (cause) {
+          fail(cause)
+          return null
+        }
+      }
       if (!text.trim()) return null
       const entry = createEntry({ text })
       // Optimistic: the entry is on screen before the disk write resolves.

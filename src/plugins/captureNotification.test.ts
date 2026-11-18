@@ -7,6 +7,9 @@ const bridge = vi.hoisted(() => ({
   setEnabled: vi.fn(),
   openSettings: vi.fn(),
   addListener: vi.fn(),
+  drainPending: vi.fn(),
+  acknowledgePending: vi.fn(),
+  releasePending: vi.fn(),
 }))
 
 vi.mock('@capacitor/core', () => ({
@@ -18,16 +21,40 @@ vi.mock('@capacitor/core', () => ({
 }))
 
 import {
+  acknowledgePendingCaptures,
+  drainPendingCaptures,
   getCaptureNotificationStatus,
   openCaptureNotificationSettings,
   setCaptureNotificationEnabled,
+  releasePendingCaptures,
   supportsCaptureNotification,
   watchCaptureNotificationStatus,
+  watchPendingCaptures,
 } from './captureNotification'
 
 beforeEach(() => vi.clearAllMocks())
 
 describe('通知原生桥', () => {
+  it('读取通知队列并将落库确认与释放操作透传给原生', async () => {
+    const batch = { entries: [], dropped: 0 }
+    bridge.drainPending.mockResolvedValue(batch)
+    expect(await drainPendingCaptures()).toEqual(batch)
+    await acknowledgePendingCaptures(['notification-id'])
+    expect(bridge.acknowledgePending).toHaveBeenCalledWith({
+      ids: ['notification-id'], owner: expect.stringMatching(/^webview-/),
+    })
+    expect(bridge.drainPending).toHaveBeenCalledWith({ owner: expect.stringMatching(/^webview-/) })
+    await releasePendingCaptures()
+    expect(bridge.releasePending).toHaveBeenCalledOnce()
+    expect(bridge.releasePending).toHaveBeenCalledWith({ owner: expect.stringMatching(/^webview-/) })
+  })
+
+  it('监听前台时收到的新回复', async () => {
+    bridge.addListener.mockResolvedValue({ remove: vi.fn() })
+    const listener = vi.fn()
+    await watchPendingCaptures(listener)
+    expect(bridge.addListener).toHaveBeenCalledWith('pendingChanged', listener)
+  })
   it('只在 Android 提供开关，不把 PWA 当作常驻通知', () => {
     bridge.getPlatform.mockReturnValue('android')
     expect(supportsCaptureNotification()).toBe(true)

@@ -11,25 +11,44 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.RemoteInput;
 import androidx.core.content.ContextCompat;
+import org.json.JSONArray;
 
 final class CaptureNotification {
     static final String CHANNEL_ID = "quick_capture";
+    static final String ACTION_REPLY = "com.lyinet.worklog.CAPTURE_REPLY";
+    static final String ACTION_PENDING_CHANGED = "com.lyinet.worklog.CAPTURE_PENDING_CHANGED";
+    static final String REPLY_KEY = "capture_text";
     private static final int NOTIFICATION_ID = 1200;
-    private static final String PREFERENCES = "capture_notification";
 
     private CaptureNotification() {}
 
     private static SharedPreferences preferences(Context context) {
-        return context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+        return context.getSharedPreferences(CaptureNotificationQueue.PREFERENCES, Context.MODE_PRIVATE);
     }
 
     static boolean isEnabled(Context context) {
         return preferences(context).getBoolean("enabled", false);
     }
 
-    static void setEnabled(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("enabled", enabled).apply();
+    static synchronized void setEnabled(Context context, boolean enabled) {
+        CaptureNotificationQueue.setEnabled(context, enabled);
+        sync(context);
+    }
+
+    static synchronized void recordReply(Context context, String text, long createdAt) {
+        CaptureNotificationQueue.append(context, text, createdAt);
+        sync(context);
+    }
+
+    static synchronized CaptureNotificationQueue.DrainResult drainPending(Context context, String owner) {
+        return CaptureNotificationQueue.drain(context, owner);
+    }
+
+    static synchronized void acknowledgePending(Context context, String owner, JSONArray ids) {
+        CaptureNotificationQueue.acknowledge(context, owner, ids);
+        sync(context);
     }
 
     static boolean hasRequestedPermission(Context context) {
@@ -59,7 +78,11 @@ final class CaptureNotification {
         return true;
     }
 
-    static void sync(Context context) {
+    static synchronized void sync(Context context) {
+        sync(context, null);
+    }
+
+    static synchronized void sync(Context context, String failure) {
         NotificationManagerCompat notifications = NotificationManagerCompat.from(context);
         if (!isEnabled(context) || !canPost(context)) {
             notifications.cancel(NOTIFICATION_ID);
@@ -70,7 +93,7 @@ final class CaptureNotification {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, "通知栏快捷记录", NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("点一下进入记录，不响铃、不震动");
+            channel.setDescription("直接回复记一笔，不响铃、不震动");
             channel.setSound(null, null);
             channel.enableVibration(false);
             channel.setShowBadge(false);
@@ -84,12 +107,28 @@ final class CaptureNotification {
             context, NOTIFICATION_ID, intent,
             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
         );
+        Intent replyIntent = new Intent(context, CaptureNotificationReceiver.class).setAction(ACTION_REPLY);
+        int replyFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) replyFlags |= PendingIntent.FLAG_MUTABLE;
+        PendingIntent reply = PendingIntent.getBroadcast(context, NOTIFICATION_ID + 1, replyIntent, replyFlags);
+        RemoteInput input = new RemoteInput.Builder(REPLY_KEY).setLabel("刚做了什么？").build();
+        NotificationCompat.Action replyAction = new NotificationCompat.Action.Builder(
+            R.drawable.ic_notification_capture, "记一笔", reply
+        ).addRemoteInput(input).setAllowGeneratedReplies(false)
+            .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+            .setShowsUserInterface(false).build();
+        int count = CaptureNotificationQueue.count(context);
+        String text = count > 0 ? "已记下 " + count + " 条，打开工作簿即入库" : "直接回复记一笔，点此打开工作簿";
+        long dropped = CaptureNotificationQueue.dropped(context);
+        if (dropped > 0) text += "；队列已满，已丢弃最旧 " + dropped + " 条";
+        if (failure != null) text = failure;
         NotificationCompat.Builder notification = new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_capture)
             .setContentTitle("工作簿")
-            .setContentText("点一下记一笔")
+            .setContentText(text)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(capture)
-            .addAction(R.drawable.ic_notification_capture, "记一笔", capture)
+            .addAction(replyAction)
             .setOngoing(true)
             .setAutoCancel(false)
             .setOnlyAlertOnce(true)
