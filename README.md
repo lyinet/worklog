@@ -7,6 +7,7 @@
 不做项目管理，不做打卡 KPI，不做积分养成。<br>
 只解决一件事：让你在想记的那一秒，记录不被界面耽误。
 
+![CI](https://github.com/lyinet/worklog/actions/workflows/ci.yml/badge.svg)
 ![version](https://img.shields.io/badge/version-1.2.0-7ee2a8)
 ![tests](https://img.shields.io/badge/tests-140%20passed-7ee2a8)
 ![platform](https://img.shields.io/badge/Android-7.0%2B%20%C2%B7%20PWA-3ddc84)
