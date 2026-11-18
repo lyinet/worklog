@@ -55,11 +55,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # ubuntu 运行器自带 Android SDK（ANDROID_HOME 已设置），这里只补目标平台与构建工具。
+      # ubuntu 运行器自带 Android SDK，但 sdkmanager 不在 PATH 上，得自己找。
       - name: 安装 Android SDK 组件
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMGR=$(ls "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          echo "SDKMGR=$SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null || true
+          "$SDKMGR" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
 
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
@@ -72,6 +78,7 @@ jobs:
       - name: 打包 debug APK
         working-directory: android
         run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
 
