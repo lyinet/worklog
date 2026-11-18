@@ -99,3 +99,13 @@ Activity 销毁时释放自己持有的锁；其他 WebView 会话在旧会话�
 - `am force-stop` 后回复不会送达（Android 对 stopped 应用不投递广播），这是系统行为，不是缺陷；文档如实记录。
 
 **仍未验证**：Android 7 / 12 与 13 以下旧版本、release（minify）构建下的回复链路、领取后进程中断的恢复、关闭开关时清除待入库队列、320 px 下轻提示换行。前两项由集成方在合并后补测 release 包。
+
+## release 包实测（v1.3.0，minify 生效）
+
+`bash scripts/build-release.sh` 出的签名包（versionName 1.3.0 / versionCode 4，v2 签名校验通过）装到同一台 Android 16 模拟器：
+
+- 装好后第一次开开关仍弹系统通知权限框，允许后通知正文是「直接回复记一笔，点此打开工作簿」。
+- 用 `kill -9` 杀掉进程（release 包不可 `run-as`，读不到 prefs，只能端到端看结果），从通知回复 `release #check` 发送；
+- 重新打开 App：顶部出现「补入 1 条通知记录」，时间线里是 `release #check`（`#check` 高亮），时间 16:51。
+
+结论：minify 后接收器、插件桥、补库链路都在，不是只有 debug 包能用。

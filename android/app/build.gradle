@@ -4,7 +4,7 @@ apply plugin: 'com.android.application'
 // - versionName 必须和仓库根目录 package.json 的 version 一致，下面会校验，不一致直接构建失败。
 // - versionCode 只能递增，每次发版发布前手动 +1（Google Play 不接受重复的 versionCode）。
 // 发版流程：改 package.json 的 version → 同步这里的 versionName → versionCode +1。
-def appVersionName = "1.2.0"
+def appVersionName = "1.3.0"
 def packageVersion = new groovy.json.JsonSlurper().parseText(file('../../package.json').text).version
 if (packageVersion != appVersionName) {
     throw new GradleException(
@@ -48,7 +48,7 @@ android {
         applicationId "com.lyinet.worklog"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
+        versionCode 4
         versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

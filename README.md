@@ -8,8 +8,8 @@
 只解决一件事：让你在想记的那一秒，记录不被界面耽误。
 
 ![CI](https://github.com/lyinet/worklog/actions/workflows/ci.yml/badge.svg)
-![version](https://img.shields.io/badge/version-1.2.0-7ee2a8)
-![tests](https://img.shields.io/badge/tests-140%20passed-7ee2a8)
+![version](https://img.shields.io/badge/version-1.3.0-7ee2a8)
+![tests](https://img.shields.io/badge/tests-211%20passed-7ee2a8)
 ![platform](https://img.shields.io/badge/Android-7.0%2B%20%C2%B7%20PWA-3ddc84)
 ![license](https://img.shields.io/badge/license-MIT-4b8bbe)
 ![deps](https://img.shields.io/badge/runtime%20deps-4-informational)
@@ -50,6 +50,7 @@
 - 行内 `#标签`：自动识别、高亮、点击即筛选，写入时已归一化
 - 桌面小部件 2×1：点一下直达输入态，键盘自动弹起
 - 通知栏快捷记录：常驻静音通知，点通知或「记一笔」按钮直达输入态（[docs/NOTIFICATION.md](docs/NOTIFICATION.md)）
+- 通知栏直接回复：在通知里打一句发送就记下了，不用打开 App；App 下次启动自动补入（[docs/NOTIFICATION-REPLY.md](docs/NOTIFICATION-REPLY.md)）
 - 语音输入：说一句落到输入框，人工改完再提交（[docs/VOICE.md](docs/VOICE.md)）
 
 **回看**
@@ -63,6 +64,7 @@
 
 - 点条目展开：编辑 / 复制 / 删除，删除有二次确认 + 5 秒撤销
 - 导出 Markdown（按天分组，直接贴周报）与 JSON 备份（文件名精确到分钟）
+- 导出周报：选本周 / 上周 / 最近 7 天 / 本月或自选日期，按标签归组 + 按天时间线，直接粘进汇报（[docs/SUMMARY.md](docs/SUMMARY.md)）
 - 从 JSON 备份恢复：**合并**而非覆盖，同 id 保留 `updatedAt` 较新的那条
 
 **装得上**
@@ -126,7 +128,7 @@ src/
 
 ## 质量与已验证的部分
 
-- **140 个单元测试**覆盖 tags / time / grouping / search / stats / export / import / removal / 语音文本 / 通知状态归一。
+- **211 个单元测试**覆盖 tags / time / grouping / search / stats / export / import / removal / 语音文本 / 通知状态归一 / 周报摘要 / 通知回复落库。
 - **设备实测**（Android 16 模拟器，emulator-5554）：输入聚焦、标签筛选、统计、删除撤销、小部件点击进输入态、语音权限与错误链路、通知栏点击进输入态与开机恢复。截图在 [docs/screenshots](docs/screenshots)。
 - **release 包单独实测**：minify 打开后 Capacitor 插件仍正常注册，通知链路可用。
 
@@ -143,6 +145,8 @@ src/
 | [docs/ANDROID.md](docs/ANDROID.md) | 安卓壳、构建与装机 |
 | [docs/RELEASE.md](docs/RELEASE.md) | 签名配置、一条命令出 release 包 |
 | [docs/NOTIFICATION.md](docs/NOTIFICATION.md) | 通知栏快捷记录：实现、权限、实测记录 |
+| [docs/NOTIFICATION-REPLY.md](docs/NOTIFICATION-REPLY.md) | 通知内直接回复：待入库队列与冷启动补库 |
+| [docs/SUMMARY.md](docs/SUMMARY.md) | 周报导出：范围语义、输出格式与实测记录 |
 | [docs/VOICE.md](docs/VOICE.md) | 语音输入：插件坑、错误归一、实测记录 |
 | [AGENTS.md](AGENTS.md) | 仓库约定与分层纪律 |
 
@@ -155,8 +159,10 @@ src/
 - [x] 桌面小部件（点击即记）
 - [x] 语音输入（说完落到输入框）
 - [x] 通知栏快捷记录（点击即记）
+- [x] 通知内直接回复写入（原生待入库队列，App 启动时补库）
+- [x] 周报导出（按标签归组 + 按天时间线）
 - [x] release 签名发布流程自动化
-- [ ] 通知内直接回复写入（RemoteInput，需原生侧写库）
+- [x] CI：测试 + 构建 + 出 debug APK 产物
 - [ ] 真机上的语音识别实测与错误文案打磨
 
 ## 许可证
